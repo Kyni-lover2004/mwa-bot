@@ -25,7 +25,9 @@ class Settings(BaseSettings):
     # Канал для проверки подписки (@username или числовой id); без него проверка выключена.
     channel_id: str | None = None
     channel_url: str = "https://t.me/mwamethod"
-    site_url: str = "https://mwamethod.com"
+    # Кнопки финала: страница основной программы и страница заявки или оплаты.
+    program_url: str = "https://mwamethod.com"
+    apply_url: str = "https://mwamethod.com"
     day_interval_minutes: int = Field(default=24 * 60, gt=0)
 
     # Публичный адрес бота. Задан - апдейты приходят по webhook (так бот живёт на хостинге),

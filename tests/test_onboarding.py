@@ -29,7 +29,7 @@ from mwa_bot.db.models import Stage, User
 from mwa_bot.db.users import pause_sending
 from mwa_bot.flow import Delivery
 from mwa_bot.handlers.onboarding import CHECK_FAILED_ALERT, NOT_SUBSCRIBED_ALERT
-from mwa_bot.keyboards import CHECK_SUBSCRIPTION_CALLBACK, WELCOME_CALLBACK
+from mwa_bot.keyboards import CHECK_SUBSCRIPTION_CALLBACK, WELCOME_CALLBACK, build_final_keyboard
 from mwa_bot.scheduler import Scheduler
 
 USER_ID = 1001
@@ -97,7 +97,12 @@ def make_chat(bot, session_factory, content):
         }
         settings = Settings(_env_file=None, **settings_values)
         sender = MaterialSender(bot, session_factory)
-        delivery = Delivery(sender, content, settings.day_interval, settings.site_url)
+        delivery = Delivery(
+            sender,
+            content,
+            settings.day_interval,
+            build_final_keyboard(settings.program_url, settings.apply_url, settings.channel_url),
+        )
         scheduler = Scheduler(session_factory, delivery)
         dispatcher = build_dispatcher(
             settings, content, sender, delivery, scheduler, session_factory
@@ -238,7 +243,11 @@ async def test_repeated_start_and_old_buttons_keep_progress(
 async def test_start_after_final_shows_final_with_site_button(
     make_chat, telegram, content, session_factory
 ):
-    chat = make_chat(site_url="https://mwamethod.test")
+    chat = make_chat(
+        program_url="https://program.test",
+        apply_url="https://apply.test",
+        channel_url="https://t.me/channel_test",
+    )
     await chat.send_text("/start")
     async with session_factory() as session:
         await session.execute(
@@ -250,7 +259,11 @@ async def test_start_after_final_shows_final_with_site_button(
 
     final = telegram.list_requests(SendMessage)[-1]
     assert final.text == content.final
-    assert final.reply_markup.inline_keyboard[0][0].url == "https://mwamethod.test"
+    assert [(button.text, button.url) for [button] in final.reply_markup.inline_keyboard] == [
+        ("ОТКРЫТЬ ПРОГРАММУ MWA", "https://program.test"),
+        ("ОФОРМИТЬ УЧАСТИЕ", "https://apply.test"),
+        ("TELEGRAM-КАНАЛ MWA", "https://t.me/channel_test"),
+    ]
 
 
 async def test_group_chats_are_ignored(make_chat, telegram):

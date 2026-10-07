@@ -3,13 +3,13 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
+from aiogram.types import InlineKeyboardMarkup
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mwa_bot.content.loader import Content
 from mwa_bot.content.sender import UPLOAD_TIMEOUT_SECONDS, MaterialSender
 from mwa_bot.db.models import Stage, User
 from mwa_bot.db.users import finish_sending, try_lock_sending
-from mwa_bot.keyboards import build_final_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -42,12 +42,16 @@ class Delivery:
     """Доставляет пользователю следующий этап и планирует отправку после него."""
 
     def __init__(
-        self, sender: MaterialSender, content: Content, day_interval: timedelta, site_url: str
+        self,
+        sender: MaterialSender,
+        content: Content,
+        day_interval: timedelta,
+        final_keyboard: InlineKeyboardMarkup,
     ) -> None:
         self._sender = sender
         self._content = content
         self._day_interval = day_interval
-        self._site_url = site_url
+        self._final_keyboard = final_keyboard
         self._in_flight: set[int] = set()
 
     async def deliver_due(self, session: AsyncSession, telegram_id: int, stage: Stage) -> None:
@@ -63,6 +67,10 @@ class Delivery:
                 await self._deliver_next(session, telegram_id, Stage.DAY3)
         finally:
             self._in_flight.discard(telegram_id)
+
+    async def send_final(self, chat_id: int) -> None:
+        """Отправляет финальное сообщение с кнопками перехода к программе и каналу."""
+        await self._sender.send_text(chat_id, self._content.final, self._final_keyboard)
 
     async def _deliver_next(
         self, session: AsyncSession, telegram_id: int, stage: Stage
@@ -83,8 +91,7 @@ class Delivery:
     async def _send_stage(self, chat_id: int, stage: Stage) -> None:
         """Отправляет материалы этапа: день целиком или финальное сообщение."""
         if stage is Stage.FINAL:
-            keyboard = build_final_keyboard(self._site_url)
-            await self._sender.send_text(chat_id, self._content.final, keyboard)
+            await self.send_final(chat_id)
         else:
             await self._sender.send_day(chat_id, self._content.days[stage])
 

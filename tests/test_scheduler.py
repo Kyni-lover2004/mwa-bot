@@ -15,6 +15,7 @@ from mwa_bot.content.sender import MaterialSender
 from mwa_bot.db.models import Stage, User
 from mwa_bot.db.users import get_or_create_user
 from mwa_bot.flow import SEND_LOCK, Delivery
+from mwa_bot.keyboards import build_final_keyboard
 from mwa_bot.scheduler import Scheduler
 
 REPO_CONTENT_DIR = Path(__file__).resolve().parent.parent / "content"
@@ -30,9 +31,10 @@ def content() -> Content:
 
 @pytest.fixture
 def scheduler(bot, session_factory, content) -> Scheduler:
-    delivery = Delivery(
-        MaterialSender(bot, session_factory), content, DAY_INTERVAL, "https://mwamethod.test"
+    final_keyboard = build_final_keyboard(
+        "https://program.test", "https://apply.test", "https://t.me/channel_test"
     )
+    delivery = Delivery(MaterialSender(bot, session_factory), content, DAY_INTERVAL, final_keyboard)
     return Scheduler(session_factory, delivery, poll_interval=timedelta(milliseconds=10))
 
 
@@ -78,7 +80,11 @@ async def test_day3_and_final_go_out_together(scheduler, session_factory, telegr
 
     final = telegram.list_requests(SendMessage)[-1]
     assert final.text == content.final
-    assert final.reply_markup.inline_keyboard[0][0].url == "https://mwamethod.test"
+    assert [(button.text, button.url) for [button] in final.reply_markup.inline_keyboard] == [
+        ("ОТКРЫТЬ ПРОГРАММУ MWA", "https://program.test"),
+        ("ОФОРМИТЬ УЧАСТИЕ", "https://apply.test"),
+        ("TELEGRAM-КАНАЛ MWA", "https://t.me/channel_test"),
+    ]
     user = await load_user(session_factory, 1)
     assert (user.stage, user.next_send_at) == (Stage.FINAL, None)
 
@@ -156,7 +162,7 @@ async def test_dispatcher_hooks_publish_description_and_run_scheduler(
 ):
     settings = Settings(_env_file=None, bot_token="123456:TEST")
     sender = MaterialSender(bot, session_factory)
-    delivery = Delivery(sender, content, DAY_INTERVAL, "")
+    delivery = Delivery(sender, content, DAY_INTERVAL, build_final_keyboard("", "", ""))
     dispatcher = build_dispatcher(settings, content, sender, delivery, scheduler, session_factory)
     await create_user(session_factory, 1, Stage.DAY1, NOW)
 

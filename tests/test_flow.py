@@ -13,10 +13,13 @@ from mwa_bot.content.loader import Content, DayItem, PhotoItem, TextItem
 from mwa_bot.db.models import Stage, User
 from mwa_bot.db.users import get_or_create_user
 from mwa_bot.flow import SEND_LOCK, Delivery, has_passed_onboarding, is_paused
+from mwa_bot.keyboards import build_final_keyboard
 
 USER_ID = 1001
 DAY_INTERVAL = timedelta(hours=24)
-SITE_URL = "https://mwamethod.test"
+FINAL_KEYBOARD = build_final_keyboard(
+    "https://program.test", "https://apply.test", "https://t.me/channel_test"
+)
 
 CONTENT = Content(
     description="description",
@@ -60,7 +63,7 @@ class FakeSender:
 
 
 def build_delivery(sender: FakeSender) -> Delivery:
-    return Delivery(sender, CONTENT, DAY_INTERVAL, SITE_URL)
+    return Delivery(sender, CONTENT, DAY_INTERVAL, FINAL_KEYBOARD)
 
 
 async def create_user(session_factory, stage: Stage, next_send_at: datetime | None) -> None:
@@ -132,7 +135,11 @@ async def test_day3_is_followed_by_final_right_away(session_factory):
 
     assert sender.sent == ["text day3", "final"]
     [keyboard] = sender.final_keyboards
-    assert keyboard.inline_keyboard[0][0].url == SITE_URL
+    assert [(button.text, button.url) for [button] in keyboard.inline_keyboard] == [
+        ("ОТКРЫТЬ ПРОГРАММУ MWA", "https://program.test"),
+        ("ОФОРМИТЬ УЧАСТИЕ", "https://apply.test"),
+        ("TELEGRAM-КАНАЛ MWA", "https://t.me/channel_test"),
+    ]
     user = await load_user(session_factory)
     assert (user.stage, user.next_send_at) == (Stage.FINAL, None)
 

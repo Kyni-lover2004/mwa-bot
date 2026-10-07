@@ -15,6 +15,7 @@ from mwa_bot.content.loader import Content, ContentError, load_content
 from mwa_bot.content.sender import MaterialSender
 from mwa_bot.db.engine import create_db_engine, create_session_factory, create_tables
 from mwa_bot.flow import Delivery
+from mwa_bot.keyboards import build_final_keyboard
 from mwa_bot.logging_setup import setup_logging
 from mwa_bot.middlewares.flood_control import RetryAfterMiddleware
 from mwa_bot.scheduler import Scheduler
@@ -35,7 +36,10 @@ async def run_bot(settings: Settings, content: Content) -> None:
     )
     bot.session.middleware(RetryAfterMiddleware())
     sender = MaterialSender(bot, session_factory)
-    delivery = Delivery(sender, content, settings.day_interval, settings.site_url)
+    final_keyboard = build_final_keyboard(
+        settings.program_url, settings.apply_url, settings.channel_url
+    )
+    delivery = Delivery(sender, content, settings.day_interval, final_keyboard)
     scheduler = Scheduler(session_factory, delivery)
     dispatcher = build_dispatcher(settings, content, sender, delivery, scheduler, session_factory)
 

@@ -2,7 +2,7 @@
 
 Telegram-бот бесплатного 3-дневного знакомства с методом MWA: описание бота и кнопка
 «Начать» → WELCOME → проверка подписки на канал → DAY 1 / MIND → через 24 часа DAY 2 / BODY →
-через 24 часа DAY 3 / ENERGY и сразу финал с кнопкой на сайт. ТЗ - в [mwa_bot_tz.md](mwa_bot_tz.md).
+через 24 часа DAY 3 / ENERGY и сразу финал с кнопками программы, заявки и канала. ТЗ - в [mwa_bot_tz.md](mwa_bot_tz.md).
 
 Стек: Python 3.12, aiogram 3, SQLAlchemy (SQLite), pydantic-settings.
 
@@ -35,8 +35,9 @@ cp .env.example .env    # вписать BOT_TOKEN
 |---|---|---|
 | `BOT_TOKEN` | - | токен от @BotFather, обязателен |
 | `CHANNEL_ID` | пусто | канал для проверки подписки (`@mwamethod`); бот должен быть его администратором. Пусто - проверка выключена |
-| `CHANNEL_URL` | `https://t.me/mwamethod` | куда ведёт кнопка «ПОДПИСАТЬСЯ НА MWA» |
-| `SITE_URL` | `https://mwamethod.com` | куда ведёт кнопка «УЗНАТЬ О MWA METHOD» |
+| `CHANNEL_URL` | `https://t.me/mwamethod` | канал: кнопки «ПОДПИСАТЬСЯ НА MWA» и «TELEGRAM-КАНАЛ MWA» |
+| `PROGRAM_URL` | `https://mwamethod.com` | кнопка финала «ОТКРЫТЬ ПРОГРАММУ MWA» |
+| `APPLY_URL` | `https://mwamethod.com` | кнопка финала «ОФОРМИТЬ УЧАСТИЕ» (заявка / оплата) |
 | `DAY_INTERVAL_MINUTES` | `1440` | пауза между днями |
 | `DATABASE_URL` | `sqlite+aiosqlite:///data/mwa_bot.db` | база данных |
 | `WEBHOOK_BASE_URL` | пусто | публичный адрес для режима webhook; на Render берётся из `RENDER_EXTERNAL_URL` |

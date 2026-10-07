@@ -6,13 +6,12 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mwa_bot.config import Settings
 from mwa_bot.content.loader import Content
 from mwa_bot.content.sender import MaterialSender
 from mwa_bot.db.models import Stage
 from mwa_bot.db.users import get_or_create_user
 from mwa_bot.flow import Delivery, has_passed_onboarding, is_paused
-from mwa_bot.keyboards import build_final_keyboard, build_welcome_keyboard
+from mwa_bot.keyboards import build_welcome_keyboard
 
 
 def create_router() -> Router:
@@ -29,7 +28,6 @@ async def handle_start(
     content: Content,
     sender: MaterialSender,
     delivery: Delivery,
-    settings: Settings,
 ) -> None:
     """Показывает экран по этапу пользователя; повторный /start прогресс не сбрасывает."""
     if message.from_user is None:
@@ -37,7 +35,7 @@ async def handle_start(
     user = await get_or_create_user(session, message.from_user.id, message.from_user.username)
 
     if user.stage is Stage.FINAL:
-        await message.answer(content.final, reply_markup=build_final_keyboard(settings.site_url))
+        await delivery.send_final(message.chat.id)
     elif is_paused(user):
         # Вернулся после блокировки бота: следующий день сразу, дальше снова по расписанию.
         await delivery.deliver_due(session, user.telegram_id, user.stage)
