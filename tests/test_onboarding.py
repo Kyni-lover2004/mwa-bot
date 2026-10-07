@@ -390,3 +390,9 @@ async def test_user_who_blocked_before_day1_gets_it_on_return_without_recheck(
 
     assert len(telegram.list_requests(GetChatMember)) == checks_before
     assert (await load_user(session_factory)).stage is Stage.DAY1
+
+
+def test_apply_button_leads_to_participation_section_by_default():
+    settings = Settings(_env_file=None, bot_token=TEST_BOT_TOKEN)
+
+    assert settings.apply_url == "https://mwamethod.com/#participation"

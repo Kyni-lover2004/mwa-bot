@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     channel_url: str = "https://t.me/mwamethod"
     # Кнопки финала: страница основной программы и страница заявки или оплаты.
     program_url: str = "https://mwamethod.com"
-    apply_url: str = "https://mwamethod.com"
+    apply_url: str = "https://mwamethod.com/#participation"
     day_interval_minutes: int = Field(default=24 * 60, gt=0)
 
     # Публичный адрес бота. Задан - апдейты приходят по webhook (так бот живёт на хостинге),

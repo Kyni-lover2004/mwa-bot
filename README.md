@@ -37,7 +37,7 @@ cp .env.example .env    # вписать BOT_TOKEN
 | `CHANNEL_ID` | пусто | канал для проверки подписки (`@mwamethod`); бот должен быть его администратором. Пусто - проверка выключена |
 | `CHANNEL_URL` | `https://t.me/mwamethod` | канал: кнопки «ПОДПИСАТЬСЯ НА MWA» и «TELEGRAM-КАНАЛ MWA» |
 | `PROGRAM_URL` | `https://mwamethod.com` | кнопка финала «ОТКРЫТЬ ПРОГРАММУ MWA» |
-| `APPLY_URL` | `https://mwamethod.com` | кнопка финала «ОФОРМИТЬ УЧАСТИЕ» (заявка / оплата) |
+| `APPLY_URL` | `https://mwamethod.com/#participation` | кнопка финала «ОФОРМИТЬ УЧАСТИЕ» (заявка / оплата) |
 | `DAY_INTERVAL_MINUTES` | `1440` | пауза между днями |
 | `DATABASE_URL` | `sqlite+aiosqlite:///data/mwa_bot.db` | база данных |
 | `WEBHOOK_BASE_URL` | пусто | публичный адрес для режима webhook; на Render берётся из `RENDER_EXTERNAL_URL` |
