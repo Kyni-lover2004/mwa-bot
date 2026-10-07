@@ -18,7 +18,7 @@ from mwa_bot.config import Settings
 from mwa_bot.content.loader import Content, load_content
 from mwa_bot.content.sender import MaterialSender
 from mwa_bot.flow import Delivery
-from mwa_bot.keyboards import build_final_keyboard
+from mwa_bot.keyboards import build_program_keyboard
 from mwa_bot.scheduler import Scheduler
 from mwa_bot.webhook import (
     HEALTH_PATH,
@@ -58,7 +58,7 @@ def web_app(bot, session_factory, content):
         sender,
         content,
         settings.day_interval,
-        build_final_keyboard(settings.program_url, settings.apply_url, settings.channel_url),
+        build_program_keyboard(settings.program_url, settings.apply_url, settings.channel_url),
     )
     scheduler = Scheduler(session_factory, delivery, poll_interval=timedelta(seconds=1))
     dispatcher = build_dispatcher(settings, content, sender, delivery, scheduler, session_factory)

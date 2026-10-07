@@ -24,7 +24,7 @@ from mwa_bot.keyboards import (
     BROADCAST_CONFIRM_CALLBACK,
     CANCEL_BUTTON,
     SEND_BUTTON,
-    build_final_keyboard,
+    build_program_keyboard,
 )
 from mwa_bot.scheduler import Scheduler
 
@@ -46,7 +46,9 @@ class BotChats:
         )
         content = load_content(REPO_CONTENT_DIR)
         sender = MaterialSender(bot, session_factory)
-        delivery = Delivery(sender, content, config.day_interval, build_final_keyboard("", "", ""))
+        delivery = Delivery(
+            sender, content, config.day_interval, build_program_keyboard("", "", "")
+        )
         scheduler = Scheduler(session_factory, delivery)
         self.dispatcher = build_dispatcher(
             config, content, sender, delivery, scheduler, session_factory

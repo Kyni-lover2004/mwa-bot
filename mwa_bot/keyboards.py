@@ -32,7 +32,7 @@ def build_subscribe_keyboard(channel_url: str) -> InlineKeyboardMarkup:
     )
 
 
-def build_final_keyboard(
+def build_program_keyboard(
     program_url: str, apply_url: str, channel_url: str
 ) -> InlineKeyboardMarkup:
     """Кнопки финального сообщения: программа, заявка, канал."""

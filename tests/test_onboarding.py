@@ -29,7 +29,7 @@ from mwa_bot.db.models import Stage, User
 from mwa_bot.db.users import pause_sending
 from mwa_bot.flow import Delivery
 from mwa_bot.handlers.onboarding import CHECK_FAILED_ALERT, NOT_SUBSCRIBED_ALERT
-from mwa_bot.keyboards import CHECK_SUBSCRIPTION_CALLBACK, WELCOME_CALLBACK, build_final_keyboard
+from mwa_bot.keyboards import CHECK_SUBSCRIPTION_CALLBACK, WELCOME_CALLBACK, build_program_keyboard
 from mwa_bot.scheduler import Scheduler
 
 USER_ID = 1001
@@ -101,7 +101,7 @@ def make_chat(bot, session_factory, content):
             sender,
             content,
             settings.day_interval,
-            build_final_keyboard(settings.program_url, settings.apply_url, settings.channel_url),
+            build_program_keyboard(settings.program_url, settings.apply_url, settings.channel_url),
         )
         scheduler = Scheduler(session_factory, delivery)
         dispatcher = build_dispatcher(
@@ -396,3 +396,20 @@ def test_apply_button_leads_to_participation_section_by_default():
     settings = Settings(_env_file=None, bot_token=TEST_BOT_TOKEN)
 
     assert settings.apply_url == "https://mwamethod.com/#participation"
+
+
+async def test_day1_ends_with_program_buttons(make_chat, telegram, content):
+    telegram.subscribe(USER_ID)
+    chat = make_chat(program_url="https://program.test")
+    await chat.send_text("/start")
+
+    await chat.press(WELCOME_CALLBACK)
+
+    last = telegram.list_requests(SendMessage)[-1]
+    assert last.text == content.days[Stage.DAY1][-1].text
+    assert [button.text for [button] in last.reply_markup.inline_keyboard] == [
+        "ОТКРЫТЬ ПРОГРАММУ MWA",
+        "ОФОРМИТЬ УЧАСТИЕ",
+        "TELEGRAM-КАНАЛ MWA",
+    ]
+    assert last.reply_markup.inline_keyboard[0][0].url == "https://program.test"

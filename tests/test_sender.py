@@ -28,14 +28,22 @@ class FakeBot:
         self.calls: list[tuple[str, int, object]] = []
         self.video_timeouts: list[int | None] = []
         self.photo_options: list[tuple[str | None, object]] = []
+        # Кнопки каждого отправленного сообщения или видео, в порядке отправки.
+        self.markups: list[object] = []
 
-    async def send_message(self, chat_id: int, text: str) -> None:
+    async def send_message(self, chat_id: int, text: str, reply_markup: object = None) -> None:
         self.calls.append(("message", chat_id, text))
+        self.markups.append(reply_markup)
 
     async def send_video(
-        self, chat_id: int, video: object, request_timeout: int | None = None
+        self,
+        chat_id: int,
+        video: object,
+        request_timeout: int | None = None,
+        reply_markup: object = None,
     ) -> SimpleNamespace:
         self.calls.append(("video", chat_id, video))
+        self.markups.append(reply_markup)
         self.video_timeouts.append(request_timeout)
         # Пауза как у сетевого запроса: даёт параллельным отправкам вклиниться.
         await asyncio.sleep(0.01)
@@ -163,3 +171,14 @@ async def test_video_by_file_id_is_sent_without_upload(session_factory):
 
     assert bot.calls == [("video", 1, "BAACAgIAAxkBAAIBY2c_test"), ("message", 1, "text")]
     assert bot.list_uploads() == []
+
+
+async def test_day_buttons_go_under_last_message_only(session_factory, day):
+    bot = FakeBot()
+
+    await MaterialSender(bot, session_factory).send_day(1, day, reply_markup="buttons")
+    await MaterialSender(bot, session_factory).send_day(
+        2, (TextItem("text"), VideoRefItem(file_id="BAACAgIAAxkBAAIBY2c_last")), "buttons"
+    )
+
+    assert bot.markups == [None, None, "buttons", None, "buttons"]

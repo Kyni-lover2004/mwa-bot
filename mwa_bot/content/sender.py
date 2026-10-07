@@ -52,16 +52,23 @@ class MaterialSender:
         """Отправляет картинку с подписью и кнопками."""
         await self._send_media(chat_id, photo, caption=caption, reply_markup=reply_markup)
 
-    async def send_day(self, chat_id: int, items: Sequence[DayItem]) -> None:
-        """Отправляет все материалы дня в указанном порядке."""
-        for item in items:
+    async def send_day(
+        self,
+        chat_id: int,
+        items: Sequence[DayItem],
+        reply_markup: InlineKeyboardMarkup | None = None,
+    ) -> None:
+        """Отправляет материалы дня по порядку; кнопки reply_markup - под последним сообщением."""
+        last_index = len(items) - 1
+        for index, item in enumerate(items):
+            markup = reply_markup if index == last_index else None
             match item:
                 case TextItem(text=text):
-                    await self._bot.send_message(chat_id, text)
+                    await self._bot.send_message(chat_id, text, reply_markup=markup)
                 case VideoItem():
-                    await self._send_media(chat_id, item)
+                    await self._send_media(chat_id, item, reply_markup=markup)
                 case VideoRefItem(file_id=file_id):
-                    await self._bot.send_video(chat_id, file_id)
+                    await self._bot.send_video(chat_id, file_id, reply_markup=markup)
 
     async def _send_media(self, chat_id: int, item: MediaItem, **options: Any) -> None:
         """Шлёт файл по сохранённому file_id, а в первый раз загружает его."""

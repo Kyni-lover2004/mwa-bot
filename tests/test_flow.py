@@ -13,11 +13,11 @@ from mwa_bot.content.loader import Content, DayItem, PhotoItem, TextItem
 from mwa_bot.db.models import Stage, User
 from mwa_bot.db.users import get_or_create_user
 from mwa_bot.flow import SEND_LOCK, Delivery, has_passed_onboarding, is_paused
-from mwa_bot.keyboards import build_final_keyboard
+from mwa_bot.keyboards import build_program_keyboard
 
 USER_ID = 1001
 DAY_INTERVAL = timedelta(hours=24)
-FINAL_KEYBOARD = build_final_keyboard(
+PROGRAM_KEYBOARD = build_program_keyboard(
     "https://program.test", "https://apply.test", "https://t.me/channel_test"
 )
 
@@ -39,22 +39,29 @@ class FakeSender:
         self.fail_on = fail_on or set()
         self.send_seconds = send_seconds
         self.sent: list[str] = []
-        self.final_keyboards: list[InlineKeyboardMarkup | None] = []
+        # Под каким отправленным текстом какие были кнопки.
+        self.keyboards: dict[str, InlineKeyboardMarkup | None] = {}
         self.finished_at: datetime | None = None
 
-    async def send_day(self, chat_id: int, items: Sequence[DayItem]) -> None:
+    async def send_day(
+        self,
+        chat_id: int,
+        items: Sequence[DayItem],
+        reply_markup: InlineKeyboardMarkup | None = None,
+    ) -> None:
         [item] = items
         assert isinstance(item, TextItem)
         # Отправка дня занимает время, как загрузка видео в Telegram.
         await asyncio.sleep(self.send_seconds)
         self._record(item.text)
+        self.keyboards[item.text] = reply_markup
         self.finished_at = datetime.now(UTC)
 
     async def send_text(
         self, chat_id: int, text: str, reply_markup: InlineKeyboardMarkup | None = None
     ) -> None:
         self._record(text)
-        self.final_keyboards.append(reply_markup)
+        self.keyboards[text] = reply_markup
 
     def _record(self, text: str) -> None:
         if text in self.fail_on:
@@ -63,7 +70,7 @@ class FakeSender:
 
 
 def build_delivery(sender: FakeSender) -> Delivery:
-    return Delivery(sender, CONTENT, DAY_INTERVAL, FINAL_KEYBOARD)
+    return Delivery(sender, CONTENT, DAY_INTERVAL, PROGRAM_KEYBOARD)
 
 
 async def create_user(session_factory, stage: Stage, next_send_at: datetime | None) -> None:
@@ -134,7 +141,7 @@ async def test_day3_is_followed_by_final_right_away(session_factory):
     await deliver(session_factory, sender, Stage.DAY2)
 
     assert sender.sent == ["text day3", "final"]
-    [keyboard] = sender.final_keyboards
+    keyboard = sender.keyboards["final"]
     assert [(button.text, button.url) for [button] in keyboard.inline_keyboard] == [
         ("ОТКРЫТЬ ПРОГРАММУ MWA", "https://program.test"),
         ("ОФОРМИТЬ УЧАСТИЕ", "https://apply.test"),
@@ -203,3 +210,25 @@ def test_user_state_checks(stage, subscribed_at, next_send_at, passed, paused):
 
     assert has_passed_onboarding(user) is passed
     assert is_paused(user) is paused
+
+
+async def test_day1_and_day2_come_with_program_buttons(session_factory):
+    await create_user(session_factory, Stage.START, None)
+    sender = FakeSender()
+
+    await deliver(session_factory, sender, Stage.START)
+    await create_user(session_factory, Stage.DAY1, datetime.now(UTC))
+    await deliver(session_factory, sender, Stage.DAY1)
+
+    assert sender.keyboards["text day1"] is PROGRAM_KEYBOARD
+    assert sender.keyboards["text day2"] is PROGRAM_KEYBOARD
+
+
+async def test_day3_has_no_buttons_because_final_brings_them(session_factory):
+    await create_user(session_factory, Stage.DAY2, datetime.now(UTC))
+    sender = FakeSender()
+
+    await deliver(session_factory, sender, Stage.DAY2)
+
+    assert sender.keyboards["text day3"] is None
+    assert sender.keyboards["final"] is PROGRAM_KEYBOARD

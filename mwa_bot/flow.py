@@ -20,6 +20,10 @@ NEXT_STAGE = {
     Stage.DAY3: Stage.FINAL,
 }
 
+# Под какими днями кнопки программы, заявки и канала. В DAY 3 их нет: финал с теми же
+# кнопками приходит сразу следом.
+DAYS_WITH_PROGRAM_BUTTONS = frozenset({Stage.DAY1, Stage.DAY2})
+
 # Через столько планировщик считает отправку оборвавшейся (сбой, перезапуск) и повторяет её.
 # Хватает на одну загрузку видео с запасом; более долгую отправку внутри процесса
 # от повтора защищает Delivery._in_flight.
@@ -46,12 +50,12 @@ class Delivery:
         sender: MaterialSender,
         content: Content,
         day_interval: timedelta,
-        final_keyboard: InlineKeyboardMarkup,
+        program_keyboard: InlineKeyboardMarkup,
     ) -> None:
         self._sender = sender
         self._content = content
         self._day_interval = day_interval
-        self._final_keyboard = final_keyboard
+        self._program_keyboard = program_keyboard
         self._in_flight: set[int] = set()
 
     async def deliver_due(self, session: AsyncSession, telegram_id: int, stage: Stage) -> None:
@@ -70,7 +74,7 @@ class Delivery:
 
     async def send_final(self, chat_id: int) -> None:
         """Отправляет финальное сообщение с кнопками перехода к программе и каналу."""
-        await self._sender.send_text(chat_id, self._content.final, self._final_keyboard)
+        await self._sender.send_text(chat_id, self._content.final, self._program_keyboard)
 
     async def _deliver_next(
         self, session: AsyncSession, telegram_id: int, stage: Stage
@@ -93,7 +97,8 @@ class Delivery:
         if stage is Stage.FINAL:
             await self.send_final(chat_id)
         else:
-            await self._sender.send_day(chat_id, self._content.days[stage])
+            keyboard = self._program_keyboard if stage in DAYS_WITH_PROGRAM_BUTTONS else None
+            await self._sender.send_day(chat_id, self._content.days[stage], keyboard)
 
     def _plan_next_send(self, delivered: Stage) -> datetime | None:
         """Когда слать этап после delivered; таймер по ТЗ идёт от конца отправки."""
