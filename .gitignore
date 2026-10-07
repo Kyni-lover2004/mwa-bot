@@ -7,3 +7,4 @@ data/
 .pytest_cache/
 .DS_Store
 videos/
+emoji/

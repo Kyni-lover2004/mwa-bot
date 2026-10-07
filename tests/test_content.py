@@ -44,7 +44,12 @@ def test_repo_content_placeholders_are_valid():
 
     assert set(content.days) == {Stage.DAY1, Stage.DAY2, Stage.DAY3}
     for items in content.days.values():
-        assert [type(item) for item in items] == [VideoItem, TextItem, TextItem]
+        video, text, practice = items
+        # Видео дня - локальная заглушка или настоящее видео, уже загруженное в Telegram.
+        assert isinstance(video, VideoItem | VideoRefItem)
+        assert isinstance(text, TextItem)
+        assert isinstance(practice, TextItem)
+    assert isinstance(content.days[Stage.DAY3][0], VideoRefItem)
     assert content.welcome.startswith("<b>WELCOME TO MWA</b>")
     assert content.welcome_photo.path.name == "welcome.jpg"
     assert content.description.startswith("Ваше первое касание с MWA METHOD.")
