@@ -4,8 +4,8 @@ import logging
 from datetime import UTC, datetime
 
 from aiogram import Bot, F, Router
-from aiogram.exceptions import TelegramAPIError, TelegramBadRequest
-from aiogram.types import CallbackQuery, Message
+from aiogram.exceptions import TelegramAPIError
+from aiogram.types import CallbackQuery
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mwa_bot.config import Settings
@@ -13,6 +13,7 @@ from mwa_bot.content.loader import Content
 from mwa_bot.db.models import Stage
 from mwa_bot.db.users import get_or_create_user, mark_subscribed
 from mwa_bot.flow import Delivery, has_passed_onboarding
+from mwa_bot.handlers.callbacks import answer_callback, remove_keyboard
 from mwa_bot.keyboards import (
     CHECK_SUBSCRIPTION_CALLBACK,
     WELCOME_CALLBACK,
@@ -122,28 +123,3 @@ async def dismiss_button(callback: CallbackQuery) -> None:
     """Гасит нажатие старой кнопки: пользователь уже прошёл этот шаг."""
     await answer_callback(callback)
     await remove_keyboard(callback)
-
-
-async def answer_callback(
-    callback: CallbackQuery, text: str | None = None, *, show_alert: bool = False
-) -> None:
-    """Отвечает на нажатие; сбой ответа не должен мешать самому переходу."""
-    try:
-        await callback.answer(text, show_alert=show_alert)
-    except TelegramAPIError as exc:
-        # Типичный случай - нажатие пролежало в очереди, пока бот перезапускался.
-        logger.info("Не удалось ответить на нажатие кнопки: %s", exc)
-
-
-async def remove_keyboard(callback: CallbackQuery) -> bool:
-    """Убирает кнопки у сообщения; False - их уже убрало другое нажатие этой же кнопки."""
-    # Сообщения старше 48 часов приходят как InaccessibleMessage, их уже не отредактировать.
-    if not isinstance(callback.message, Message) or callback.message.reply_markup is None:
-        return True
-    try:
-        await callback.message.edit_reply_markup(reply_markup=None)
-    except TelegramAPIError as exc:
-        if isinstance(exc, TelegramBadRequest) and "message is not modified" in exc.message:
-            return False
-        logger.warning("Не удалось убрать кнопки: %s", exc)
-    return True

@@ -98,3 +98,9 @@ async def list_due_users(session: AsyncSession, now: datetime) -> list[User]:
         select(User).where(User.next_send_at <= now).order_by(User.next_send_at)
     )
     return list(result)
+
+
+async def list_user_ids(session: AsyncSession) -> list[int]:
+    """Telegram ID всех, кто запускал бота, в порядке первого запуска."""
+    result = await session.scalars(select(User.telegram_id).order_by(User.started_at))
+    return list(result)

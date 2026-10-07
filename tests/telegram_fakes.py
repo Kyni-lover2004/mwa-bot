@@ -7,6 +7,7 @@ from aiogram import Bot
 from aiogram.client.session.base import BaseSession
 from aiogram.methods import (
     AnswerCallbackQuery,
+    CopyMessage,
     DeleteWebhook,
     EditMessageReplyMarkup,
     GetChatMember,
@@ -14,6 +15,7 @@ from aiogram.methods import (
     SendMessage,
     SendPhoto,
     SendVideo,
+    SetMyCommands,
     SetMyDescription,
     SetWebhook,
     TelegramMethod,
@@ -98,7 +100,7 @@ class FakeTelegramSession(BaseSession):
         """HTTP-код и JSON-тело, которыми Telegram ответил бы на запрос."""
         if queued := self._failures.get(type(method)):
             return queued.pop(0)
-        is_send = isinstance(method, SendMessage | SendVideo | SendPhoto)
+        is_send = isinstance(method, SendMessage | SendVideo | SendPhoto | CopyMessage)
         if is_send and method.chat_id in self.blocked_chat_ids:
             return build_error(403, "Forbidden: bot was blocked by the user")
         if isinstance(method, EditMessageReplyMarkup):
@@ -143,6 +145,11 @@ class FakeTelegramSession(BaseSession):
                 else:
                     message["text"] = method.text
                 return message
+            case CopyMessage():
+                self._last_message_id += 1
+                return {"message_id": self._last_message_id}
+            case SetMyCommands():
+                return True
             case GetMyDescription():
                 return {"description": self.bot_description}
             case SetMyDescription():
@@ -157,3 +164,36 @@ class FakeTelegramSession(BaseSession):
 
     async def close(self) -> None:
         pass
+
+
+def build_message_update(update_id: int, user_id: int, **payload: Any) -> dict[str, Any]:
+    """Апдейт с сообщением пользователя в личке с ботом."""
+    message = {
+        "message_id": update_id,
+        "date": 0,
+        "chat": {"id": user_id, "type": "private"},
+        "from": build_user_json(user_id),
+        **payload,
+    }
+    return {"update_id": update_id, "message": message}
+
+
+def build_callback_update(
+    update_id: int, user_id: int, data: str, message_id: int
+) -> dict[str, Any]:
+    """Апдейт с нажатием inline-кнопки под сообщением бота message_id."""
+    message = {
+        "message_id": message_id,
+        "date": 0,
+        "chat": {"id": user_id, "type": "private"},
+        "text": "screen",
+        "reply_markup": {"inline_keyboard": [[{"text": "button", "callback_data": data}]]},
+    }
+    callback_query = {
+        "id": str(update_id),
+        "from": build_user_json(user_id),
+        "chat_instance": "chat",
+        "data": data,
+        "message": message,
+    }
+    return {"update_id": update_id, "callback_query": callback_query}

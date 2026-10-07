@@ -2,10 +2,10 @@
 
 from datetime import timedelta
 from pathlib import Path
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 
@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     program_url: str = "https://mwamethod.com"
     apply_url: str = "https://mwamethod.com/#participation"
     day_interval_minutes: int = Field(default=24 * 60, gt=0)
+    # Telegram ID админов через запятую: им доступна рассылка всем пользователям бота.
+    admin_ids: Annotated[frozenset[int], NoDecode] = frozenset()
 
     # Публичный адрес бота. Задан - апдейты приходят по webhook (так бот живёт на хостинге),
     # пуст - бот сам забирает их polling-ом (локальный запуск). Render выставляет
@@ -38,6 +40,14 @@ class Settings(BaseSettings):
         default=None, validation_alias=AliasChoices("WEBHOOK_BASE_URL", "RENDER_EXTERNAL_URL")
     )
     port: int = 8080
+
+    @field_validator("admin_ids", mode="before")
+    @classmethod
+    def parse_admin_ids(cls, value: object) -> object:
+        """Разбирает ADMIN_IDS вида "123, 456" в набор чисел."""
+        if isinstance(value, str):
+            return frozenset(int(part) for part in value.split(",") if part.strip())
+        return value
 
     @field_validator("channel_id")
     @classmethod

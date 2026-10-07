@@ -1,4 +1,4 @@
-"""Служебное для админов канала MWA: file_id видео для материалов дней."""
+"""Служебное для админов: file_id видео для материалов дней."""
 
 from aiogram import Bot, F, Router
 from aiogram.enums import ChatType
@@ -32,7 +32,7 @@ async def handle_admin_video(message: Message, bot: Bot, settings: Settings) -> 
     """Отвечает админу канала file_id присланного видео; остальным не отвечает."""
     if message.from_user is None or message.video is None:
         return
-    if not await is_channel_admin(bot, settings.channel_id, message.from_user.id):
+    if not await is_admin(bot, settings, message.from_user.id):
         return
     await message.answer(FILE_ID_REPLY.format(file_id=message.video.file_id))
 
@@ -41,5 +41,12 @@ async def handle_video_sent_as_file(message: Message, bot: Bot, settings: Settin
     """Подсказывает админу, что видео нужно отправить как видео, а не файлом."""
     if message.from_user is None:
         return
-    if await is_channel_admin(bot, settings.channel_id, message.from_user.id):
+    if await is_admin(bot, settings, message.from_user.id):
         await message.answer(SENT_AS_FILE_REPLY)
+
+
+async def is_admin(bot: Bot, settings: Settings, user_id: int) -> bool:
+    """Загружать видео могут админы из ADMIN_IDS и админы канала."""
+    return user_id in settings.admin_ids or await is_channel_admin(
+        bot, settings.channel_id, user_id
+    )
