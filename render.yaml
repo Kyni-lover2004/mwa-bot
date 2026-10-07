@@ -1,0 +1,19 @@
+# Blueprint для Render: Dashboard -> New -> Blueprint -> этот репозиторий.
+services:
+  - type: web
+    name: mwa-bot
+    runtime: python
+    plan: free
+    buildCommand: pip install .
+    startCommand: python -m mwa_bot
+    healthCheckPath: /health
+    envVars:
+      # Токен от @BotFather; Render спросит его при создании Blueprint.
+      - key: BOT_TOKEN
+        sync: false
+      # Для демо дни идут каждые 2 минуты: бесплатный сервис засыпает через 15 минут
+      # без входящего трафика, и суточные интервалы на нём не доживут. 1440 = 24 часа.
+      - key: DAY_INTERVAL_MINUTES
+        value: "2"
+      - key: LOG_LEVEL
+        value: INFO
