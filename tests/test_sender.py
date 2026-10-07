@@ -13,6 +13,7 @@ from mwa_bot.content.loader import (
     PhotoItem,
     TextItem,
     VideoItem,
+    VideoRefItem,
     hash_media_file,
 )
 from mwa_bot.content.sender import UPLOAD_TIMEOUT_SECONDS, MaterialSender
@@ -152,3 +153,13 @@ async def test_photo_is_uploaded_once_and_keeps_caption_and_buttons(session_fact
     assert upload.data == b"jpeg bytes"
     assert bot.calls[1][2] == "photo-1280-42"
     assert bot.photo_options == [("caption", "keyboard"), ("caption", "keyboard")]
+
+
+async def test_video_by_file_id_is_sent_without_upload(session_factory):
+    bot = FakeBot()
+    sender = MaterialSender(bot, session_factory)
+
+    await sender.send_day(1, (VideoRefItem(file_id="BAACAgIAAxkBAAIBY2c_test"), TextItem("text")))
+
+    assert bot.calls == [("video", 1, "BAACAgIAAxkBAAIBY2c_test"), ("message", 1, "text")]
+    assert bot.list_uploads() == []

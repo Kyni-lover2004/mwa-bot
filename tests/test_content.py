@@ -15,6 +15,7 @@ from mwa_bot.content.loader import (
     ContentError,
     TextItem,
     VideoItem,
+    VideoRefItem,
     load_content,
     load_day,
 )
@@ -178,4 +179,28 @@ def test_description_is_plain_text_with_its_own_limit(content_dir):
 
     description.write_text("я" * (MAX_DESCRIPTION_LENGTH + 1), encoding="utf-8")
     with pytest.raises(ContentError, match=str(MAX_DESCRIPTION_LENGTH)):
+        load_content(content_dir)
+
+
+def test_day_video_can_be_telegram_file_id(content_dir):
+    day_dir = content_dir / "day3"
+    (day_dir / "01_video.mp4").unlink()
+    (day_dir / "01_video.fileid").write_text("BAACAgIAAxkBAAIBY2c_test-file_ID\n", encoding="utf-8")
+
+    items = load_day(day_dir)
+
+    assert items[0] == VideoRefItem(file_id="BAACAgIAAxkBAAIBY2c_test-file_ID")
+
+
+def test_broken_file_id_is_reported(content_dir):
+    (content_dir / "day3" / "01_video.fileid").write_text("скопировал не то", encoding="utf-8")
+
+    with pytest.raises(ContentError, match="file_id"):
+        load_content(content_dir)
+
+
+def test_oversized_video_error_suggests_file_id(content_dir):
+    os.truncate(content_dir / "day1" / "01_video.mp4", MAX_VIDEO_BYTES + 1)
+
+    with pytest.raises(ContentError, match=r"\.fileid"):
         load_content(content_dir)

@@ -16,6 +16,7 @@ from mwa_bot.content.loader import (
     PhotoItem,
     TextItem,
     VideoItem,
+    VideoRefItem,
     read_media_bytes,
 )
 from mwa_bot.db.media import get_file_id, save_file_id
@@ -59,6 +60,8 @@ class MaterialSender:
                     await self._bot.send_message(chat_id, text)
                 case VideoItem():
                     await self._send_media(chat_id, item)
+                case VideoRefItem(file_id=file_id):
+                    await self._bot.send_video(chat_id, file_id)
 
     async def _send_media(self, chat_id: int, item: MediaItem, **options: Any) -> None:
         """Шлёт файл по сохранённому file_id, а в первый раз загружает его."""

@@ -29,6 +29,18 @@ async def is_subscribed(bot: Bot, channel_id: str | None, user_id: int) -> bool:
     return isinstance(member, ChatMemberOwner | ChatMemberAdministrator | ChatMemberMember)
 
 
+async def is_channel_admin(bot: Bot, channel_id: str | None, user_id: int) -> bool:
+    """True, если пользователь - владелец или администратор канала."""
+    if channel_id is None:
+        return False
+    try:
+        member = await bot.get_chat_member(chat_id=channel_id, user_id=user_id)
+    except TelegramAPIError as exc:
+        logger.warning("Не удалось проверить, админ ли %s канала %s: %s", user_id, channel_id, exc)
+        return False
+    return isinstance(member, ChatMemberOwner | ChatMemberAdministrator)
+
+
 async def check_channel_access(bot: Bot, settings: Settings) -> None:
     """При старте проверяет, что бот - администратор канала; иначе пишет в лог, что исправить."""
     if settings.channel_id is None:

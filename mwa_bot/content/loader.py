@@ -1,6 +1,7 @@
 """Загрузка контента из папки при старте бота."""
 
 import hashlib
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,6 +17,8 @@ MAX_DESCRIPTION_LENGTH = 512
 
 DAY_DIRS = {Stage.DAY1: "day1", Stage.DAY2: "day2", Stage.DAY3: "day3"}
 WELCOME_PHOTO_NAMES = ("welcome.jpg", "welcome.jpeg", "welcome.png")
+# file_id Telegram - строка из латиницы, цифр, _ и -.
+FILE_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]{20,}")
 
 
 class ContentError(Exception):
@@ -45,7 +48,14 @@ class PhotoItem:
     sha256: str
 
 
-DayItem = TextItem | VideoItem
+@dataclass(frozen=True)
+class VideoRefItem:
+    """Видео, уже загруженное в Telegram: бот отправляет его по file_id без ограничения размера."""
+
+    file_id: str
+
+
+DayItem = TextItem | VideoItem | VideoRefItem
 MediaItem = VideoItem | PhotoItem
 
 
@@ -104,7 +114,19 @@ def load_item(path: Path) -> DayItem:
             return TextItem(read_text(path))
         case ".mp4":
             return VideoItem(path=path, sha256=hash_media_file(path, MAX_VIDEO_BYTES))
-    raise ContentError(f"Неподдерживаемый файл {path}: в папке дня допустимы .html и .mp4")
+        case ".fileid":
+            return load_video_ref(path)
+    raise ContentError(f"Неподдерживаемый файл {path}: в папке дня допустимы .html, .mp4 и .fileid")
+
+
+def load_video_ref(path: Path) -> VideoRefItem:
+    """Читает file_id видео, которое админ канала отправил боту."""
+    file_id = read_file_text(path)
+    if not FILE_ID_PATTERN.fullmatch(file_id):
+        raise ContentError(
+            f"В {path} должна быть одна строка - file_id, который прислал бот в ответ на видео"
+        )
+    return VideoRefItem(file_id=file_id)
 
 
 def hash_media_file(path: Path, max_bytes: int) -> str:
@@ -113,7 +135,8 @@ def hash_media_file(path: Path, max_bytes: int) -> str:
     if size > max_bytes:
         raise ContentError(
             f"Файл {path} весит {size / 1024 / 1024:.1f} МБ, "
-            f"Bot API принимает до {max_bytes // 1024 // 1024} МБ"
+            f"Bot API принимает до {max_bytes // 1024 // 1024} МБ. Большое видео отправь боту "
+            f"с аккаунта админа канала и положи присланный file_id в файл .fileid"
         )
     with path.open("rb") as file:
         return hashlib.file_digest(file, "sha256").hexdigest()

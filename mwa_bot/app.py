@@ -8,7 +8,7 @@ from mwa_bot.config import Settings
 from mwa_bot.content.loader import Content
 from mwa_bot.content.sender import MaterialSender
 from mwa_bot.flow import Delivery
-from mwa_bot.handlers import onboarding, start
+from mwa_bot.handlers import admin, onboarding, start
 from mwa_bot.middlewares.db import DbSessionMiddleware
 from mwa_bot.scheduler import Scheduler
 from mwa_bot.subscription import check_channel_access
@@ -26,7 +26,9 @@ def build_dispatcher(
     # Именованные аргументы диспетчера aiogram передаёт в хендлеры по имени параметра.
     dispatcher = Dispatcher(settings=settings, content=content, sender=sender, delivery=delivery)
     dispatcher.update.middleware(DbSessionMiddleware(session_factory))
-    dispatcher.include_routers(start.create_router(), onboarding.create_router())
+    dispatcher.include_routers(
+        start.create_router(), onboarding.create_router(), admin.create_router()
+    )
     # Хуки shutdown срабатывают до закрытия сессии бота, поэтому планировщик успевает остановиться.
     dispatcher.startup.register(publish_description)
     dispatcher.startup.register(check_channel_access)
