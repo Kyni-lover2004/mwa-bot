@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
-from aiogram.methods import SendMessage, SendVideo
+from aiogram.methods import GetChatMember, SendMessage, SendVideo
 from sqlalchemy import update
 
 from mwa_bot.app import build_dispatcher
@@ -179,3 +179,7 @@ async def test_dispatcher_hooks_publish_description_and_run_scheduler(
     await asyncio.sleep(0.1)
     assert (await load_user(session_factory, 2)).stage is Stage.DAY1
     assert telegram.bot_description == content.description
+    # При старте бот проверил, что он администратор канала подписки.
+    assert [(r.chat_id, r.user_id) for r in telegram.list_requests(GetChatMember)] == [
+        ("@mwamethod", bot.id)
+    ]

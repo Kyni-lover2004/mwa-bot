@@ -4,7 +4,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Literal
 
-from pydantic import AliasChoices, Field, SecretStr
+from pydantic import AliasChoices, Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
@@ -22,8 +22,9 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///data/mwa_bot.db"
     content_dir: Path = Path("content")
 
-    # Канал для проверки подписки (@username или числовой id); без него проверка выключена.
-    channel_id: str | None = None
+    # Канал для проверки подписки (@username или числовой id вида -100...); бот должен быть
+    # его администратором. Значение off выключает проверку, например для тестового бота.
+    channel_id: str | None = "@mwamethod"
     channel_url: str = "https://t.me/mwamethod"
     # Кнопки финала: страница основной программы и страница заявки или оплаты.
     program_url: str = "https://mwamethod.com"
@@ -37,6 +38,14 @@ class Settings(BaseSettings):
         default=None, validation_alias=AliasChoices("WEBHOOK_BASE_URL", "RENDER_EXTERNAL_URL")
     )
     port: int = 8080
+
+    @field_validator("channel_id")
+    @classmethod
+    def disable_channel_check(cls, value: str | None) -> str | None:
+        """Превращает CHANNEL_ID=off в None: проверка подписки выключена."""
+        if value is not None and value.strip().lower() == "off":
+            return None
+        return value
 
     @property
     def day_interval(self) -> timedelta:

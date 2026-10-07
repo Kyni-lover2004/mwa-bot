@@ -1,13 +1,15 @@
 """Тесты проверки подписки на канал."""
 
+import logging
 from typing import Any
 
 import pytest
 from aiogram.methods import GetChatMember
 from aiogram.types import ChatMemberAdministrator, ChatMemberRestricted
-from telegram_fakes import build_rights_json, build_user_json
+from telegram_fakes import TEST_BOT_TOKEN, build_rights_json, build_user_json
 
-from mwa_bot.subscription import is_subscribed
+from mwa_bot.config import Settings
+from mwa_bot.subscription import check_channel_access, is_subscribed
 
 USER_ID = 1001
 
@@ -54,4 +56,52 @@ async def test_restricted_member_counts_only_if_still_in_channel(bot, telegram, 
 
 async def test_disabled_check_does_not_call_telegram(bot, telegram):
     assert await is_subscribed(bot, None, USER_ID) is True
+    assert telegram.list_requests(GetChatMember) == []
+
+
+def build_settings(**overrides: Any) -> Settings:
+    return Settings(_env_file=None, bot_token=TEST_BOT_TOKEN, **overrides)
+
+
+def test_check_is_on_for_mwa_channel_by_default_and_off_disables_it():
+    assert build_settings().channel_id == "@mwamethod"
+    assert build_settings(channel_id=" OFF ").channel_id is None
+    assert build_settings(channel_id="-1003986030435").channel_id == "-1003986030435"
+
+
+async def test_startup_confirms_bot_is_channel_admin(bot, telegram, caplog):
+    caplog.set_level(logging.INFO)
+    admin_rights = build_rights_json(ChatMemberAdministrator, exclude={"status", "user"})
+    telegram.chat_members[bot.id] = {
+        "status": "administrator",
+        "user": build_user_json(bot.id),
+        **admin_rights,
+    }
+
+    await check_channel_access(bot, build_settings())
+
+    assert "Проверка подписки включена" in caplog.text
+    assert "ERROR" not in caplog.text
+
+
+async def test_startup_reports_bot_that_is_not_admin(bot, telegram, caplog):
+    telegram.chat_members[bot.id] = {"status": "member", "user": build_user_json(bot.id)}
+
+    await check_channel_access(bot, build_settings())
+
+    assert "нужен администратор" in caplog.text
+
+
+async def test_startup_reports_inaccessible_channel(bot, telegram, caplog):
+    telegram.fail_next(GetChatMember, 400, "Bad Request: member list is inaccessible")
+
+    await check_channel_access(bot, build_settings())
+
+    assert "Добавь бота администратором канала" in caplog.text
+
+
+async def test_startup_warns_when_check_is_off(bot, telegram, caplog):
+    await check_channel_access(bot, build_settings(channel_id="off"))
+
+    assert "проверка подписки выключена" in caplog.text
     assert telegram.list_requests(GetChatMember) == []

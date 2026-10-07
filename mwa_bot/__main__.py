@@ -72,9 +72,6 @@ def main() -> None:
     except ContentError as exc:
         sys.exit(f"Ошибка контента: {exc}")
 
-    if settings.channel_id is None:
-        logger.warning("CHANNEL_ID не задан: проверка подписки выключена, проходят все")
-
     asyncio.run(run_bot(settings, content))
 
 

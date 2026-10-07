@@ -11,6 +11,7 @@ from mwa_bot.flow import Delivery
 from mwa_bot.handlers import onboarding, start
 from mwa_bot.middlewares.db import DbSessionMiddleware
 from mwa_bot.scheduler import Scheduler
+from mwa_bot.subscription import check_channel_access
 
 
 def build_dispatcher(
@@ -28,6 +29,7 @@ def build_dispatcher(
     dispatcher.include_routers(start.create_router(), onboarding.create_router())
     # Хуки shutdown срабатывают до закрытия сессии бота, поэтому планировщик успевает остановиться.
     dispatcher.startup.register(publish_description)
+    dispatcher.startup.register(check_channel_access)
     dispatcher.startup.register(scheduler.start)
     dispatcher.shutdown.register(scheduler.stop)
     return dispatcher
