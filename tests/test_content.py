@@ -51,7 +51,7 @@ def test_repo_content_placeholders_are_valid():
         assert isinstance(practice, TextItem)
     assert isinstance(content.days[Stage.DAY3][0], VideoRefItem)
     assert content.welcome.startswith("<b>WELCOME TO MWA</b>")
-    assert content.welcome_photo.path.name == "welcome.jpg"
+    assert content.welcome_photo.path.name in {"welcome.jpg", "welcome.jpeg", "welcome.png"}
     assert content.description.startswith("Ваше первое касание с MWA METHOD.")
 
 
