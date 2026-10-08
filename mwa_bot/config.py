@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     channel_id: str | None = "@mwamethod"
     channel_url: str = "https://t.me/mwamethod"
     # Кнопки финала: страница основной программы и страница заявки или оплаты.
-    program_url: str = "https://mwamethod.com"
+    program_url: str = "https://mwamethod.com/#program"
     apply_url: str = "https://mwamethod.com/#participation"
     day_interval_minutes: int = Field(default=24 * 60, gt=0)
     # Telegram ID админов через запятую: им доступна рассылка всем пользователям бота.

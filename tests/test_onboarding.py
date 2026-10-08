@@ -29,7 +29,7 @@ from mwa_bot.db.models import Stage, User
 from mwa_bot.db.users import pause_sending
 from mwa_bot.flow import Delivery
 from mwa_bot.handlers.onboarding import CHECK_FAILED_ALERT, NOT_SUBSCRIBED_ALERT
-from mwa_bot.keyboards import CHECK_SUBSCRIPTION_CALLBACK, WELCOME_CALLBACK, build_program_keyboard
+from mwa_bot.keyboards import CHECK_SUBSCRIPTION_CALLBACK, WELCOME_CALLBACK
 from mwa_bot.scheduler import Scheduler
 
 USER_ID = 1001
@@ -97,12 +97,7 @@ def make_chat(bot, session_factory, content):
         }
         settings = Settings(_env_file=None, **settings_values)
         sender = MaterialSender(bot, session_factory)
-        delivery = Delivery(
-            sender,
-            content,
-            settings.day_interval,
-            build_program_keyboard(settings.program_url, settings.apply_url, settings.channel_url),
-        )
+        delivery = Delivery(sender, content, settings)
         scheduler = Scheduler(session_factory, delivery)
         dispatcher = build_dispatcher(
             settings, content, sender, delivery, scheduler, session_factory
@@ -398,7 +393,7 @@ def test_apply_button_leads_to_participation_section_by_default():
     assert settings.apply_url == "https://mwamethod.com/#participation"
 
 
-async def test_day1_ends_with_program_buttons(make_chat, telegram, content):
+async def test_day1_ends_with_single_program_button(make_chat, telegram, content):
     telegram.subscribe(USER_ID)
     chat = make_chat(program_url="https://program.test")
     await chat.send_text("/start")
@@ -407,9 +402,11 @@ async def test_day1_ends_with_program_buttons(make_chat, telegram, content):
 
     last = telegram.list_requests(SendMessage)[-1]
     assert last.text == content.days[Stage.DAY1][-1].text
-    assert [button.text for [button] in last.reply_markup.inline_keyboard] == [
-        "ОТКРЫТЬ ПРОГРАММУ MWA",
-        "ОФОРМИТЬ УЧАСТИЕ",
-        "TELEGRAM-КАНАЛ MWA",
-    ]
-    assert last.reply_markup.inline_keyboard[0][0].url == "https://program.test"
+    [[button]] = last.reply_markup.inline_keyboard
+    assert (button.text, button.url) == ("ОТКРЫТЬ ПРОГРАММУ MWA", "https://program.test")
+
+
+def test_program_button_leads_to_program_section_by_default():
+    settings = Settings(_env_file=None, bot_token=TEST_BOT_TOKEN)
+
+    assert settings.program_url == "https://mwamethod.com/#program"

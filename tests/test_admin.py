@@ -14,7 +14,6 @@ from mwa_bot.content.loader import load_content
 from mwa_bot.content.sender import MaterialSender
 from mwa_bot.flow import Delivery
 from mwa_bot.handlers.admin import SENT_AS_FILE_REPLY
-from mwa_bot.keyboards import build_program_keyboard
 from mwa_bot.scheduler import Scheduler
 
 REPO_CONTENT_DIR = Path(__file__).resolve().parent.parent / "content"
@@ -30,9 +29,7 @@ def send_from(bot, session_factory):
         config = Settings(_env_file=None, bot_token=TEST_BOT_TOKEN, **settings)
         content = load_content(REPO_CONTENT_DIR)
         sender = MaterialSender(bot, session_factory)
-        delivery = Delivery(
-            sender, content, config.day_interval, build_program_keyboard("", "", "")
-        )
+        delivery = Delivery(sender, content, config)
         scheduler = Scheduler(session_factory, delivery)
         dispatcher = build_dispatcher(config, content, sender, delivery, scheduler, session_factory)
         message = {

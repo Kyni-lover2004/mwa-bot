@@ -36,8 +36,8 @@ cp .env.example .env    # вписать BOT_TOKEN
 | `BOT_TOKEN` | - | токен от @BotFather, обязателен |
 | `CHANNEL_ID` | `@mwamethod` | канал для проверки подписки; бот должен быть его администратором, при старте он это проверяет и пишет в лог. `off` - проверка выключена |
 | `CHANNEL_URL` | `https://t.me/mwamethod` | канал: кнопки «ПОДПИСАТЬСЯ НА MWA» и «TELEGRAM-КАНАЛ MWA» |
-| `PROGRAM_URL` | `https://mwamethod.com` | кнопка финала «ОТКРЫТЬ ПРОГРАММУ MWA» |
-| `APPLY_URL` | `https://mwamethod.com/#participation` | кнопка финала «ОФОРМИТЬ УЧАСТИЕ» (заявка / оплата) |
+| `PROGRAM_URL` | `https://mwamethod.com/#program` | кнопка «ОТКРЫТЬ ПРОГРАММУ MWA» под DAY 1, DAY 2 и в финале |
+| `APPLY_URL` | `https://mwamethod.com/#participation` | кнопка «ОФОРМИТЬ УЧАСТИЕ» в финале (заявка / оплата) |
 | `ADMIN_IDS` | пусто | Telegram ID админов через запятую: рассылка (/admin) и загрузка видео дней |
 | `DAY_INTERVAL_MINUTES` | `1440` | пауза между днями |
 | `DATABASE_URL` | `sqlite+aiosqlite:///data/mwa_bot.db` | база данных |

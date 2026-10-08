@@ -8,18 +8,37 @@ from pathlib import Path
 import pytest
 from aiogram.types import InlineKeyboardMarkup
 from sqlalchemy import update
+from telegram_fakes import TEST_BOT_TOKEN
 
+from mwa_bot.config import Settings
 from mwa_bot.content.loader import Content, DayItem, PhotoItem, TextItem
 from mwa_bot.db.models import Stage, User
 from mwa_bot.db.users import get_or_create_user
 from mwa_bot.flow import SEND_LOCK, Delivery, has_passed_onboarding, is_paused
-from mwa_bot.keyboards import build_program_keyboard
 
 USER_ID = 1001
 DAY_INTERVAL = timedelta(hours=24)
-PROGRAM_KEYBOARD = build_program_keyboard(
-    "https://program.test", "https://apply.test", "https://t.me/channel_test"
+SETTINGS = Settings(
+    _env_file=None,
+    bot_token=TEST_BOT_TOKEN,
+    program_url="https://program.test",
+    apply_url="https://apply.test",
+    channel_url="https://t.me/channel_test",
 )
+DAY_BUTTONS = [("ОТКРЫТЬ ПРОГРАММУ MWA", "https://program.test")]
+FINAL_BUTTONS = [
+    ("ОТКРЫТЬ ПРОГРАММУ MWA", "https://program.test"),
+    ("ОФОРМИТЬ УЧАСТИЕ", "https://apply.test"),
+    ("TELEGRAM-КАНАЛ MWA", "https://t.me/channel_test"),
+]
+
+
+def list_buttons(keyboard: InlineKeyboardMarkup | None) -> list[tuple[str, str | None]]:
+    """Кнопки клавиатуры как пары (текст, ссылка); пустой список, если кнопок нет."""
+    if keyboard is None:
+        return []
+    return [(button.text, button.url) for [button] in keyboard.inline_keyboard]
+
 
 CONTENT = Content(
     description="description",
@@ -70,7 +89,7 @@ class FakeSender:
 
 
 def build_delivery(sender: FakeSender) -> Delivery:
-    return Delivery(sender, CONTENT, DAY_INTERVAL, PROGRAM_KEYBOARD)
+    return Delivery(sender, CONTENT, SETTINGS)
 
 
 async def create_user(session_factory, stage: Stage, next_send_at: datetime | None) -> None:
@@ -220,8 +239,8 @@ async def test_day1_and_day2_come_with_program_buttons(session_factory):
     await create_user(session_factory, Stage.DAY1, datetime.now(UTC))
     await deliver(session_factory, sender, Stage.DAY1)
 
-    assert sender.keyboards["text day1"] is PROGRAM_KEYBOARD
-    assert sender.keyboards["text day2"] is PROGRAM_KEYBOARD
+    assert list_buttons(sender.keyboards["text day1"]) == DAY_BUTTONS
+    assert list_buttons(sender.keyboards["text day2"]) == DAY_BUTTONS
 
 
 async def test_day3_has_no_buttons_because_final_brings_them(session_factory):
@@ -231,4 +250,4 @@ async def test_day3_has_no_buttons_because_final_brings_them(session_factory):
     await deliver(session_factory, sender, Stage.DAY2)
 
     assert sender.keyboards["text day3"] is None
-    assert sender.keyboards["final"] is PROGRAM_KEYBOARD
+    assert list_buttons(sender.keyboards["final"]) == FINAL_BUTTONS

@@ -32,13 +32,23 @@ def build_subscribe_keyboard(channel_url: str) -> InlineKeyboardMarkup:
     )
 
 
-def build_program_keyboard(
+PROGRAM_BUTTON = "ОТКРЫТЬ ПРОГРАММУ MWA"
+
+
+def build_day_keyboard(program_url: str) -> InlineKeyboardMarkup:
+    """Кнопка под DAY 1 и DAY 2: страница основной программы."""
+    return InlineKeyboardMarkup(
+        inline_keyboard=[[InlineKeyboardButton(text=PROGRAM_BUTTON, url=program_url)]]
+    )
+
+
+def build_final_keyboard(
     program_url: str, apply_url: str, channel_url: str
 ) -> InlineKeyboardMarkup:
     """Кнопки финального сообщения: программа, заявка, канал."""
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="ОТКРЫТЬ ПРОГРАММУ MWA", url=program_url)],
+            [InlineKeyboardButton(text=PROGRAM_BUTTON, url=program_url)],
             [InlineKeyboardButton(text="ОФОРМИТЬ УЧАСТИЕ", url=apply_url)],
             [InlineKeyboardButton(text="TELEGRAM-КАНАЛ MWA", url=channel_url)],
         ]

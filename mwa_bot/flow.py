@@ -3,13 +3,14 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-from aiogram.types import InlineKeyboardMarkup
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mwa_bot.config import Settings
 from mwa_bot.content.loader import Content
 from mwa_bot.content.sender import UPLOAD_TIMEOUT_SECONDS, MaterialSender
 from mwa_bot.db.models import Stage, User
 from mwa_bot.db.users import finish_sending, try_lock_sending
+from mwa_bot.keyboards import build_day_keyboard, build_final_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +21,9 @@ NEXT_STAGE = {
     Stage.DAY3: Stage.FINAL,
 }
 
-# Под какими днями кнопки программы, заявки и канала. В DAY 3 их нет: финал с теми же
-# кнопками приходит сразу следом.
-DAYS_WITH_PROGRAM_BUTTONS = frozenset({Stage.DAY1, Stage.DAY2})
+# Под какими днями кнопка «ОТКРЫТЬ ПРОГРАММУ MWA». Под DAY 3 её нет: сразу следом приходит
+# финал со всеми тремя кнопками.
+DAYS_WITH_PROGRAM_BUTTON = frozenset({Stage.DAY1, Stage.DAY2})
 
 # Через столько планировщик считает отправку оборвавшейся (сбой, перезапуск) и повторяет её.
 # Хватает на одну загрузку видео с запасом; более долгую отправку внутри процесса
@@ -49,13 +50,15 @@ class Delivery:
         self,
         sender: MaterialSender,
         content: Content,
-        day_interval: timedelta,
-        program_keyboard: InlineKeyboardMarkup,
+        settings: Settings,
     ) -> None:
         self._sender = sender
         self._content = content
-        self._day_interval = day_interval
-        self._program_keyboard = program_keyboard
+        self._day_interval = settings.day_interval
+        self._day_keyboard = build_day_keyboard(settings.program_url)
+        self._final_keyboard = build_final_keyboard(
+            settings.program_url, settings.apply_url, settings.channel_url
+        )
         self._in_flight: set[int] = set()
 
     async def deliver_due(self, session: AsyncSession, telegram_id: int, stage: Stage) -> None:
@@ -74,7 +77,7 @@ class Delivery:
 
     async def send_final(self, chat_id: int) -> None:
         """Отправляет финальное сообщение с кнопками перехода к программе и каналу."""
-        await self._sender.send_text(chat_id, self._content.final, self._program_keyboard)
+        await self._sender.send_text(chat_id, self._content.final, self._final_keyboard)
 
     async def _deliver_next(
         self, session: AsyncSession, telegram_id: int, stage: Stage
@@ -97,7 +100,7 @@ class Delivery:
         if stage is Stage.FINAL:
             await self.send_final(chat_id)
         else:
-            keyboard = self._program_keyboard if stage in DAYS_WITH_PROGRAM_BUTTONS else None
+            keyboard = self._day_keyboard if stage in DAYS_WITH_PROGRAM_BUTTON else None
             await self._sender.send_day(chat_id, self._content.days[stage], keyboard)
 
     def _plan_next_send(self, delivered: Stage) -> datetime | None:

@@ -15,7 +15,6 @@ from mwa_bot.content.sender import MaterialSender
 from mwa_bot.db.models import Stage, User
 from mwa_bot.db.users import get_or_create_user
 from mwa_bot.flow import SEND_LOCK, Delivery
-from mwa_bot.keyboards import build_program_keyboard
 from mwa_bot.scheduler import Scheduler
 
 REPO_CONTENT_DIR = Path(__file__).resolve().parent.parent / "content"
@@ -31,12 +30,14 @@ def content() -> Content:
 
 @pytest.fixture
 def scheduler(bot, session_factory, content) -> Scheduler:
-    program_keyboard = build_program_keyboard(
-        "https://program.test", "https://apply.test", "https://t.me/channel_test"
+    settings = Settings(
+        _env_file=None,
+        bot_token="123456:TEST",
+        program_url="https://program.test",
+        apply_url="https://apply.test",
+        channel_url="https://t.me/channel_test",
     )
-    delivery = Delivery(
-        MaterialSender(bot, session_factory), content, DAY_INTERVAL, program_keyboard
-    )
+    delivery = Delivery(MaterialSender(bot, session_factory), content, settings)
     return Scheduler(session_factory, delivery, poll_interval=timedelta(milliseconds=10))
 
 
@@ -164,7 +165,7 @@ async def test_dispatcher_hooks_publish_description_and_run_scheduler(
 ):
     settings = Settings(_env_file=None, bot_token="123456:TEST")
     sender = MaterialSender(bot, session_factory)
-    delivery = Delivery(sender, content, DAY_INTERVAL, build_program_keyboard("", "", ""))
+    delivery = Delivery(sender, content, settings)
     dispatcher = build_dispatcher(settings, content, sender, delivery, scheduler, session_factory)
     await create_user(session_factory, 1, Stage.DAY1, NOW)
 
